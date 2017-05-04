@@ -1,3 +1,3 @@
 # ChartTest
-一个图表练习
+一个图表练习<br>
 ![image](https://github.com/AndroidNerd/ChartTest/blob/master/pic/chart.jpg?raw=true)
