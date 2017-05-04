@@ -151,6 +151,7 @@ public class CurveChart extends View {
                 new float[]{0.175f, 0.375f, 0.425f, 0.575f, 0.625f, 0.775f, 0.825f, 1f},
                 Shader.TileMode.CLAMP);
         curPaint.setShader(mLinearGradient);
+        curPaint.setShadowLayer(10F, 0F, 5F,Color.parseColor("#AAffb90f"));
         canvas.drawPath(path, curPaint);
 
     }
