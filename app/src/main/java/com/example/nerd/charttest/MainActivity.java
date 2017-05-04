@@ -31,7 +31,6 @@ public class MainActivity extends AppCompatActivity {
                     points.add(point);
                 }
                 chart.setPoints(points);
-                chart.postInvalidate();
             }
         });
         ArrayList<PointF> points = new ArrayList<>();

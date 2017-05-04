@@ -1,6 +1,7 @@
 package com.example.nerd.charttest;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
@@ -10,6 +11,7 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.support.annotation.IntDef;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -37,6 +39,9 @@ public class CurveChart extends View {
     private TYPE type;
 
     ArrayList<PointF> points;
+
+    Canvas mCanvas;
+    Bitmap mBitmap,holder;
 
     public CurveChart(Context context) {
         this(context, null);
@@ -84,28 +89,41 @@ public class CurveChart extends View {
         points.add(new PointF(6, 0.5f));
 
 
+
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        AxisXRect = new RectF(0, 0, getWidth() / 10, getHeight());
-        AxisYRect = new RectF(AxisXRect.width(), getHeight() / 5 * 4, getWidth(), getHeight());
+        AxisXRect = new RectF(0, 0, getMeasuredWidth() / 10, getMeasuredHeight());
+        AxisYRect = new RectF(AxisXRect.width(), getMeasuredHeight() / 5 * 4, getMeasuredWidth(), getMeasuredHeight());
 
     }
 
+    boolean isDraw = false;
+
     @Override
     protected void onDraw(Canvas canvas) {
-        drawXT(canvas);
-        drawYT(canvas);
+        if(isDraw){
+            canvas.drawBitmap(holder,0,0,null);
+            return;
+        }
+        mBitmap=Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+        mCanvas=new Canvas(mBitmap);
+
+
+        drawXT(mCanvas);
+        drawYT(mCanvas);
         turnPoint();
         initCurPaint(curPaint);
         if (type == TYPE.CURVER) {
-            drawScrollLine(canvas);
+            drawScrollLine(mCanvas);
         } else {
-            drawFoldLine(canvas);
+            drawFoldLine(mCanvas);
         }
-
+        holder=mBitmap;
+        canvas.drawBitmap(mBitmap,0,0,null);
+        isDraw=true;
     }
 
     public void setType(TYPE type) {
@@ -113,8 +131,12 @@ public class CurveChart extends View {
     }
 
     public void setPoints(ArrayList<PointF> points) {
+        if(this.points==points){
+            return;
+        }
         this.points = points;
-
+        isDraw=false;
+        postInvalidate();
     }
 
     public void setShadowLayer(float radius, float dx, float dy, int shadowColor) {
@@ -197,6 +219,7 @@ public class CurveChart extends View {
         canvas.drawPath(path, curPaint);
 
     }
+
 
     private void drawXT(Canvas canvas) {
         String str[] = new String[]{"20", "15", "10", "5", "0"};
