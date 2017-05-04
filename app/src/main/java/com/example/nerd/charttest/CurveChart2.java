@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 /**
  * Created by xcj on 2017/4/28.
@@ -48,7 +49,7 @@ public class CurveChart2 extends View {
         linePaint = new Paint();
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeWidth(2f);
-        linePaint.setColor(Color.GRAY);
+        linePaint.setColor(Color.parseColor("#e3e3e3"));
 
         txtPaint = new Paint();
         txtPaint.setStyle(Paint.Style.FILL);

@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 /**
  * Created by xcj on 2017/4/28.
@@ -28,6 +29,12 @@ public class CurveChart extends View {
 
     RectF AxisXRect;
     RectF AxisYRect;
+
+    public enum TYPE {
+        FOLD, CURVER
+    }
+
+    private TYPE type;
 
     ArrayList<PointF> points;
 
@@ -48,7 +55,7 @@ public class CurveChart extends View {
         linePaint = new Paint();
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeWidth(2f);
-        linePaint.setColor(Color.GRAY);
+        linePaint.setColor(Color.parseColor("#e3e3e3"));
 
         txtPaint = new Paint();
         txtPaint.setStyle(Paint.Style.FILL);
@@ -59,6 +66,8 @@ public class CurveChart extends View {
         curPaint.setStyle(Paint.Style.STROKE);
         curPaint.setStrokeWidth(5f);
         curPaint.setColor(Color.GREEN);
+
+        type = TYPE.CURVER;
 
         points = new ArrayList<PointF>();
 
@@ -82,21 +91,57 @@ public class CurveChart extends View {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         AxisXRect = new RectF(0, 0, getWidth() / 10, getHeight());
         AxisYRect = new RectF(AxisXRect.width(), getHeight() / 5 * 4, getWidth(), getHeight());
+
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        Log.e("X", AxisXRect.left + "  " + AxisXRect.top + "   " + AxisXRect.right + "   " + AxisXRect.bottom);
-        Log.e("X", AxisYRect.left + "  " + AxisYRect.top + "   " + AxisYRect.right + "   " + AxisYRect.bottom);
-//        canvas.drawRect(AxisXRect, linePaint);
-//        canvas.drawRect(AxisYRect, linePaint);
         drawXT(canvas);
         drawYT(canvas);
         turnPoint();
-//        drawCurve(canvas);
-        drawFoldLine(canvas);
+        initCurPaint(curPaint);
+        if (type == TYPE.CURVER) {
+            drawScrollLine(canvas);
+        } else {
+            drawFoldLine(canvas);
+        }
 
     }
+
+    public void setType(TYPE type) {
+        this.type = type;
+    }
+
+    public void setPoints(ArrayList<PointF> points) {
+        this.points = points;
+
+    }
+
+    public void setShadowLayer(float radius, float dx, float dy, int shadowColor) {
+        curPaint.setShadowLayer(radius, dx, dy, shadowColor);
+    }
+
+    private void initCurPaint(Paint paint) {
+        paint.setShadowLayer(10F, 0F, 5F, Color.parseColor("#AAffb90f"));
+        LinearGradient mLinearGradient = new LinearGradient(
+                0, AxisYRect.top / 5, 0, AxisYRect.top,
+                new int[]{
+                        Color.parseColor("#ff7f00"),
+                        Color.parseColor("#ffb90f"),
+                        Color.parseColor("#ffb90f"),
+                        Color.parseColor("#6BE61A"),
+                        Color.parseColor("#6BE61A"),
+                        Color.parseColor("#1AE6E6")},
+                new float[]{0.225f, 0.275f, 0.475f, 0.525f, 0.725f, 0.775f},
+                Shader.TileMode.CLAMP);
+        paint.setShader(mLinearGradient);
+
+    }
+
+    public RectF getAxisYRect() {
+        return AxisYRect;
+    }
+
 
     private void turnPoint() {
         float zoomY = AxisYRect.top / 5 + txtPaint.getTextSize() / 4;
@@ -108,28 +153,26 @@ public class CurveChart extends View {
         }
     }
 
-    private void drawCurve(Canvas canvas) {
-        Path path = new Path();
-        path.moveTo(points.get(0).x, points.get(0).y);
-        for (int i = 1; i < points.size() - 1; i = i + 3)
-            path.cubicTo(points.get(i - 1).x, points.get(i - 1).y, points.get(i).x, points.get(i).y, points.get(i + 1).x, points.get(i + 1).y);
+    private void drawScrollLine(Canvas canvas) {
+        PointF startp;
+        PointF endp;
+        for (int i = 0; i < points.size() - 1; i++) {
+            startp = points.get(i);
+            endp = points.get(i + 1);
+            float wt = (startp.x + endp.x) / 2;
+            PointF p3 = new PointF();
+            PointF p4 = new PointF();
+            p3.y = startp.y;
+            p3.x = wt;
+            p4.y = endp.y;
+            p4.x = wt;
 
-        LinearGradient mLinearGradient = new LinearGradient(
-                0, 0, 0, AxisYRect.top,
-                new int[]{
-                        Color.parseColor("#ff7f00"),
-                        Color.parseColor("#ff7f00"),
-                        Color.parseColor("#ffb90f"),
-                        Color.parseColor("#ffb90f"),
-                        Color.parseColor("#6BE61A"),
-                        Color.parseColor("#6BE61A"),
-                        Color.parseColor("#1AE6E6"),
-                        Color.parseColor("#1AE6E6")},
-                new float[]{0.175f, 0.375f, 0.425f, 0.575f, 0.625f, 0.775f, 0.825f, 1f},
-                Shader.TileMode.CLAMP);
-        curPaint.setShader(mLinearGradient);
-        canvas.drawPath(path, curPaint);
-
+            Path path = new Path();
+            path.moveTo(startp.x, startp.y);
+            path.cubicTo(p3.x, p3.y, p4.x, p4.y, endp.x, endp.y);
+            canvas.drawPath(path, curPaint);
+            Log.e("line", "line" + i);
+        }
     }
 
     private void drawFoldLine(Canvas canvas) {
@@ -137,21 +180,20 @@ public class CurveChart extends View {
         path.moveTo(points.get(0).x, points.get(0).y);
         for (int i = 1; i < points.size(); i++)
             path.lineTo(points.get(i).x, points.get(i).y);
-        LinearGradient mLinearGradient = new LinearGradient(
-                0, 0, 0, AxisYRect.top,
-                new int[]{
-                        Color.parseColor("#ff7f00"),
-                        Color.parseColor("#ff7f00"),
-                        Color.parseColor("#ffb90f"),
-                        Color.parseColor("#ffb90f"),
-                        Color.parseColor("#6BE61A"),
-                        Color.parseColor("#6BE61A"),
-                        Color.parseColor("#1AE6E6"),
-                        Color.parseColor("#1AE6E6")},
-                new float[]{0.175f, 0.375f, 0.425f, 0.575f, 0.625f, 0.775f, 0.825f, 1f},
-                Shader.TileMode.CLAMP);
-        curPaint.setShader(mLinearGradient);
-        curPaint.setShadowLayer(10F, 0F, 5F,Color.parseColor("#AAffb90f"));
+//        LinearGradient mLinearGradient = new LinearGradient(
+//                0, AxisYRect.top/4, 0, AxisYRect.top,
+//                new int[]{
+//                        Color.parseColor("#ff7f00"),
+//                        Color.parseColor("#ff7f00"),
+//                        Color.parseColor("#ffb90f"),
+//                        Color.parseColor("#ffb90f"),
+//                        Color.parseColor("#6BE61A"),
+//                        Color.parseColor("#6BE61A"),
+//                        Color.parseColor("#1AE6E6"),
+//                        Color.parseColor("#1AE6E6")},
+//                new float[]{0.175f, 0.375f, 0.425f, 0.575f, 0.625f, 0.775f, 0.825f, 1f},
+//                Shader.TileMode.CLAMP);
+//        curPaint.setShader(mLinearGradient);
         canvas.drawPath(path, curPaint);
 
     }
