@@ -94,9 +94,10 @@ public class CurveChart2 extends View {
         drawYT(canvas);
         turnPoint();
 //        drawCurve(canvas);
-        drawFoldLine(canvas);
-
+//        drawFoldLine(canvas);
+        drawScrollLine(canvas);
     }
+
 
     private void turnPoint() {
         float zoomY = AxisYRect.top / 5 + txtPaint.getTextSize() / 4;
@@ -130,6 +131,41 @@ public class CurveChart2 extends View {
         curPaint.setShader(mLinearGradient);
         canvas.drawPath(path, curPaint);
 
+    }
+
+    private void drawScrollLine(Canvas canvas) {
+        LinearGradient mLinearGradient = new LinearGradient(
+                0, 0, 0, AxisYRect.top,
+                new int[]{
+                        Color.parseColor("#ff7f00"),
+                        Color.parseColor("#ff7f00"),
+                        Color.parseColor("#ffb90f"),
+                        Color.parseColor("#ffb90f"),
+                        Color.parseColor("#6BE61A"),
+                        Color.parseColor("#6BE61A"),
+                        Color.parseColor("#1AE6E6"),
+                        Color.parseColor("#1AE6E6")},
+                new float[]{0.175f, 0.375f, 0.425f, 0.575f, 0.625f, 0.775f, 0.825f, 1f},
+                Shader.TileMode.CLAMP);
+        curPaint.setShader(mLinearGradient);
+        PointF startp;
+        PointF endp;
+        for (int i = 0; i < points.size() - 1; i++) {
+            startp = points.get(i);
+            endp = points.get(i + 1);
+            float wt = (startp.x + endp.x) / 2;
+            PointF p3 = new PointF();
+            PointF p4 = new PointF();
+            p3.y = startp.y;
+            p3.x = wt;
+            p4.y = endp.y;
+            p4.x = wt;
+
+            Path path = new Path();
+            path.moveTo(startp.x, startp.y);
+            path.cubicTo(p3.x, p3.y, p4.x, p4.y, endp.x, endp.y);
+            canvas.drawPath(path, curPaint);
+        }
     }
 
     private void drawFoldLine(Canvas canvas) {

@@ -93,8 +93,8 @@ public class CurveChart extends View {
         drawXT(canvas);
         drawYT(canvas);
         turnPoint();
-        drawCurve(canvas);
-//        drawFoldLine(canvas);
+//        drawCurve(canvas);
+        drawFoldLine(canvas);
 
     }
 
