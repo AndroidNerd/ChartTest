@@ -11,7 +11,6 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.support.annotation.IntDef;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -49,6 +48,7 @@ public class CurveChart extends View {
     private int mPaddingTop = 20;
 
     private int viewWidth, viewHeight;
+    private String[] Xst,Yst;
 
     public CurveChart(Context context) {
         this(context, null);
@@ -87,15 +87,21 @@ public class CurveChart extends View {
 //            PointF point = new PointF(i, new Random().nextFloat()*4f);
 //            points.add(point);
 //        }
-        points.add(new PointF(0, 0.5f));
-        points.add(new PointF(1, 3.5f));
-        points.add(new PointF(2, 1.5f));
-        points.add(new PointF(3, 0.5f));
-        points.add(new PointF(4, 2.5f));
-        points.add(new PointF(5, 3.5f));
-        points.add(new PointF(6, 0.5f));
+//        points.add(new PointF(0, 0.5f));
+//        points.add(new PointF(1, 3.5f));
+//        points.add(new PointF(2, 1.5f));
+//        points.add(new PointF(3, 0.5f));
+//        points.add(new PointF(4, 2.5f));
+//        points.add(new PointF(5, 3.5f));
+//        points.add(new PointF(6, 0.5f));
 
 
+    }
+    public void setXst(String[] str){
+        Xst=str;
+    }
+    public void setYst(String[] str){
+        Yst=str;
     }
 
     @Override
@@ -125,7 +131,7 @@ public class CurveChart extends View {
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        Log.e("on", "Layout");
+        Log.e("on", "Layout"+points.size());
     }
 
     boolean isDraw = false;
@@ -166,10 +172,6 @@ public class CurveChart extends View {
         this.points = points;
         isDraw = false;
         postInvalidate();
-    }
-
-    public void setShadowLayer(float radius, float dx, float dy, int shadowColor) {
-        curPaint.setShadowLayer(radius, dx, dy, shadowColor);
     }
 
     private void initCurPaint(Paint paint) {
@@ -229,10 +231,9 @@ public class CurveChart extends View {
 
 
     private void drawXT() {
-        String str[] = new String[]{"20", "15", "10", "5", "0"};
         float width = AxisXRect.right;
-        for (int i = 0; i < str.length; i++) {
-            mCanvas.drawText(str[i], width - getTextWidth(txtPaint, str[i]) - 10, mPaddingTop + i * mSpace + txtPaint.getTextSize() / 2, txtPaint);
+        for (int i = 0; i < Xst.length; i++) {
+            mCanvas.drawText(Xst[i], width - getTextWidth(txtPaint, Xst[i]) - 10, mPaddingTop + i * mSpace + txtPaint.getTextSize() / 2, txtPaint);
 
             if (i == 1 || i == 3) {
                 Paint paint = new Paint();
@@ -258,14 +259,13 @@ public class CurveChart extends View {
     }
 
     private void drawYT() {
-        String str[] = new String[]{"20", "21", "22", "23", "24", "25", "26"};
         float left = AxisYRect.left;
 
         Paint.FontMetrics fontMetrics = txtPaint.getFontMetrics();
         int baseLine = (int) (viewHeight - getPaddingBottom() + viewHeight - getPaddingBottom() - mTxtSize - fontMetrics.bottom - fontMetrics.top) >> 1;
 
-        for (int i = 0; i < str.length; i++) {
-            mCanvas.drawText(str[i], (float) (left + AxisYRect.width() / str.length * (i + 0.5)) - getTextWidth(txtPaint, str[i]) / 2, baseLine+20, txtPaint);
+        for (int i = 0; i < Yst.length; i++) {
+            mCanvas.drawText(Yst[i], (float) (left + AxisYRect.width() / Yst.length * (i + 0.5)) - getTextWidth(txtPaint, Yst[i]) / 2, baseLine+20, txtPaint);
         }
     }
 
