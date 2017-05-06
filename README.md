@@ -2,7 +2,7 @@
 一个图表练习<br>
 
 ![image](https://github.com/AndroidNerd/ChartTest/blob/master/pic/chart.gif?raw=true)<br>
-核心代码：<br>
+使用代码：<br>
  <pre><code> chart.setPoints(points);
   String str[] = new String[]{"20", "15", "10", "5", "0"};
   chart.setXst(str);
