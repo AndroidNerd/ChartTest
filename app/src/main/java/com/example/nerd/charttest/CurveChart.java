@@ -25,23 +25,30 @@ import java.util.Random;
 
 public class CurveChart extends View {
     //坐标点需要转化为实际的点
-    Paint txtPaint;
-    Paint linePaint;
-    Paint curPaint;
+    private Paint txtPaint;
+    private Paint linePaint;
+    private Paint curPaint;
 
-    RectF AxisXRect;
-    RectF AxisYRect;
+    private RectF AxisXRect;
+    private RectF AxisYRect;
 
     public enum TYPE {
         FOLD, CURVER
     }
 
     private TYPE type;
+    private ArrayList<PointF> points;
+    private Canvas mCanvas;
+    private Bitmap mBitmap, holder;
+    private Path sparkPath = new Path();
+    private Path renderPath = new Path();
 
-    ArrayList<PointF> points;
+    private int mTxtSize = 40;
+    private int mTxtColor = Color.GRAY;
+    private int mSpace = 100;
+    private int mPaddingTop = 20;
 
-    Canvas mCanvas;
-    Bitmap mBitmap,holder;
+    private int viewWidth, viewHeight;
 
     public CurveChart(Context context) {
         this(context, null);
@@ -64,8 +71,8 @@ public class CurveChart extends View {
 
         txtPaint = new Paint();
         txtPaint.setStyle(Paint.Style.FILL);
-        txtPaint.setTextSize(25f);
-        txtPaint.setColor(Color.GRAY);
+        txtPaint.setTextSize(mTxtSize);
+        txtPaint.setColor(mTxtColor);
 
         curPaint = new Paint();
         curPaint.setStyle(Paint.Style.STROKE);
@@ -89,41 +96,63 @@ public class CurveChart extends View {
         points.add(new PointF(6, 0.5f));
 
 
-
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        AxisXRect = new RectF(0, 0, getMeasuredWidth() / 10, getMeasuredHeight());
-        AxisYRect = new RectF(AxisXRect.width(), getMeasuredHeight() / 5 * 4, getMeasuredWidth(), getMeasuredHeight());
+        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+        if (widthMode == MeasureSpec.EXACTLY) {
+            viewWidth = widthSize;
+        } else {
+            viewWidth = widthSize;
+        }
+        if (heightMode == MeasureSpec.EXACTLY) {
+            viewHeight = heightSize;
+        } else {
+            mPaddingTop += getPaddingTop();
+            viewHeight = mSpace * 4 + mPaddingTop + mTxtSize + getPaddingBottom();
+        }
 
+        setMeasuredDimension(viewWidth, viewHeight);
+        AxisXRect = new RectF(getPaddingLeft(), mSpace - mTxtSize / 2, getPaddingLeft() + 2 * mTxtSize, viewHeight - getPaddingBottom() - mTxtSize);
+        AxisYRect = new RectF(AxisXRect.right, viewHeight - getPaddingBottom() - mTxtSize, viewWidth - getPaddingRight(), viewHeight);
+
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+        Log.e("on", "Layout");
     }
 
     boolean isDraw = false;
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if(isDraw){
-            canvas.drawBitmap(holder,0,0,null);
+        if (isDraw) {
+            canvas.drawBitmap(holder, 0, 0, null);
             return;
         }
-        mBitmap=Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
-        mCanvas=new Canvas(mBitmap);
+        mBitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+        mCanvas = new Canvas(mBitmap);
 
-
-        drawXT(mCanvas);
-        drawYT(mCanvas);
         turnPoint();
+
+        drawXT();
+        drawYT();
+
         initCurPaint(curPaint);
         if (type == TYPE.CURVER) {
-            drawScrollLine(mCanvas);
+            drawScrollLine();
         } else {
-            drawFoldLine(mCanvas);
+            drawFoldLine();
         }
-        holder=mBitmap;
-        canvas.drawBitmap(mBitmap,0,0,null);
-        isDraw=true;
+        holder = mBitmap;
+        canvas.drawBitmap(mBitmap, 0, 0, null);
+        isDraw = true;
     }
 
     public void setType(TYPE type) {
@@ -131,11 +160,11 @@ public class CurveChart extends View {
     }
 
     public void setPoints(ArrayList<PointF> points) {
-        if(this.points==points){
+        if (this.points == points) {
             return;
         }
         this.points = points;
-        isDraw=false;
+        isDraw = false;
         postInvalidate();
     }
 
@@ -146,7 +175,7 @@ public class CurveChart extends View {
     private void initCurPaint(Paint paint) {
         paint.setShadowLayer(10F, 0F, 5F, Color.parseColor("#AAffb90f"));
         LinearGradient mLinearGradient = new LinearGradient(
-                0, AxisYRect.top / 5, 0, AxisYRect.top,
+                0, mPaddingTop, 0, AxisYRect.top,
                 new int[]{
                         Color.parseColor("#ff7f00"),
                         Color.parseColor("#ffb90f"),
@@ -154,28 +183,22 @@ public class CurveChart extends View {
                         Color.parseColor("#6BE61A"),
                         Color.parseColor("#6BE61A"),
                         Color.parseColor("#1AE6E6")},
-                new float[]{0.225f, 0.275f, 0.475f, 0.525f, 0.725f, 0.775f},
+                new float[]{0.235f, 0.265f, 0.485f, 0.515f, 0.735f, 0.765f},
                 Shader.TileMode.CLAMP);
         paint.setShader(mLinearGradient);
-
     }
-
-    public RectF getAxisYRect() {
-        return AxisYRect;
-    }
-
 
     private void turnPoint() {
-        float zoomY = AxisYRect.top / 5 + txtPaint.getTextSize() / 4;
+        float zoomY = mSpace;
         float left = AxisYRect.left;
         float width = AxisYRect.right - AxisYRect.left;
         for (int i = 0; i < points.size(); i++) {
             PointF pointF = points.get(i);
-            points.get(i).set(left + i * width / points.size(), AxisYRect.top - pointF.y * zoomY);
+            points.get(i).set((float) (left + (i + 0.5) * width / points.size()), AxisYRect.top - pointF.y * zoomY);
         }
     }
 
-    private void drawScrollLine(Canvas canvas) {
+    private void drawScrollLine() {
         PointF startp;
         PointF endp;
         for (int i = 0; i < points.size() - 1; i++) {
@@ -192,81 +215,57 @@ public class CurveChart extends View {
             Path path = new Path();
             path.moveTo(startp.x, startp.y);
             path.cubicTo(p3.x, p3.y, p4.x, p4.y, endp.x, endp.y);
-            canvas.drawPath(path, curPaint);
-            Log.e("line", "line" + i);
+            mCanvas.drawPath(path, curPaint);
         }
     }
 
-    private void drawFoldLine(Canvas canvas) {
+    private void drawFoldLine() {
         Path path = new Path();
         path.moveTo(points.get(0).x, points.get(0).y);
         for (int i = 1; i < points.size(); i++)
             path.lineTo(points.get(i).x, points.get(i).y);
-//        LinearGradient mLinearGradient = new LinearGradient(
-//                0, AxisYRect.top/4, 0, AxisYRect.top,
-//                new int[]{
-//                        Color.parseColor("#ff7f00"),
-//                        Color.parseColor("#ff7f00"),
-//                        Color.parseColor("#ffb90f"),
-//                        Color.parseColor("#ffb90f"),
-//                        Color.parseColor("#6BE61A"),
-//                        Color.parseColor("#6BE61A"),
-//                        Color.parseColor("#1AE6E6"),
-//                        Color.parseColor("#1AE6E6")},
-//                new float[]{0.175f, 0.375f, 0.425f, 0.575f, 0.625f, 0.775f, 0.825f, 1f},
-//                Shader.TileMode.CLAMP);
-//        curPaint.setShader(mLinearGradient);
-        canvas.drawPath(path, curPaint);
-
+        mCanvas.drawPath(path, curPaint);
     }
 
 
-    private void drawXT(Canvas canvas) {
+    private void drawXT() {
         String str[] = new String[]{"20", "15", "10", "5", "0"};
-        float height = AxisYRect.top;
         float width = AxisXRect.right;
         for (int i = 0; i < str.length; i++) {
-            canvas.drawText(str[i], width - getTextWidth(txtPaint, str[i]) - 10, (i + 1) * height / 5 + txtPaint.getTextSize() / 2, txtPaint);
+            mCanvas.drawText(str[i], width - getTextWidth(txtPaint, str[i]) - 10, mPaddingTop + i * mSpace + txtPaint.getTextSize() / 2, txtPaint);
 
-            if (i == 1) {
+            if (i == 1 || i == 3) {
                 Paint paint = new Paint();
                 paint.setStyle(Paint.Style.STROKE);
                 paint.setStrokeWidth(2f);
-                paint.setColor(Color.parseColor("#ff7f00"));
                 paint.setPathEffect(new DashPathEffect(new float[]{10, 5}, 0));
+                if (i == 1) {
+                    paint.setColor(Color.parseColor("#ff7f00"));
+                } else {
+                    paint.setColor(Color.parseColor("#1AE6E6"));
+                }
                 Path path = new Path();
-                path.moveTo(width, (i + 1) * height / 5 + txtPaint.getTextSize() / 4);
-                path.lineTo(getWidth() - 20, (i + 1) * height / 5 + txtPaint.getTextSize() / 4);
-                canvas.drawPath(path, paint);
+                path.moveTo(width, mPaddingTop + i * mSpace);
+                path.lineTo(viewWidth - getPaddingRight(), mPaddingTop + i * mSpace);
+                mCanvas.drawPath(path, paint);
                 //google drawLine no support dashed line
 //                canvas.drawLine(width, (i + 1) * height / 5 + txtPaint.getTextSize() / 4, getWidth() - 20, (i + 1) * height / 5 + txtPaint.getTextSize() / 4, paint);
 
-            } else if (i == 3) {
-                Paint paint = new Paint();
-                paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(2f);
-                paint.setColor(Color.parseColor("#1AE6E6"));
-                paint.setPathEffect(new DashPathEffect(new float[]{10, 5}, 0));
-                Path path = new Path();
-                path.moveTo(width, (i + 1) * height / 5 + txtPaint.getTextSize() / 4);
-                path.lineTo(getWidth() - 20, (i + 1) * height / 5 + txtPaint.getTextSize() / 4);
-                canvas.drawPath(path, paint);
-
             } else {
-                canvas.drawLine(width, (i + 1) * height / 5 + txtPaint.getTextSize() / 4, getWidth() - 20, (i + 1) * height / 5 + txtPaint.getTextSize() / 4, linePaint);
+                mCanvas.drawLine(width, mPaddingTop + i * mSpace, viewWidth - getPaddingRight(), mPaddingTop + i * mSpace, linePaint);
             }
-
         }
     }
 
-    private void drawYT(Canvas canvas) {
-        linePaint.setTextSize(50f);
+    private void drawYT() {
         String str[] = new String[]{"20", "21", "22", "23", "24", "25", "26"};
-        float width = AxisYRect.right - AxisYRect.left;
-        float height = AxisYRect.top + 20;
         float left = AxisYRect.left;
+
+        Paint.FontMetrics fontMetrics = txtPaint.getFontMetrics();
+        int baseLine = (int) (viewHeight - getPaddingBottom() + viewHeight - getPaddingBottom() - mTxtSize - fontMetrics.bottom - fontMetrics.top) >> 1;
+
         for (int i = 0; i < str.length; i++) {
-            canvas.drawText(str[i], left + i * width / str.length, height + txtPaint.getTextSize(), txtPaint);
+            mCanvas.drawText(str[i], (float) (left + AxisYRect.width() / str.length * (i + 0.5)) - getTextWidth(txtPaint, str[i]) / 2, baseLine+20, txtPaint);
         }
     }
 
