@@ -1,6 +1,8 @@
 package com.example.nerd.charttest;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -8,9 +10,12 @@ import android.graphics.DashPathEffect;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.support.annotation.IntDef;
+import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -48,7 +53,16 @@ public class CurveChart extends View {
     private int mPaddingTop = 20;
 
     private int viewWidth, viewHeight;
-    private String[] Xst,Yst;
+    private String[] Xst, Yst;
+
+    private boolean isDrawed = false;
+    private boolean isMeasured = false;
+    private boolean isTurned = false;
+    private boolean isDrawing = false;
+
+
+    private ValueAnimator pathAnimator;
+    private static int shortAnimationTime;
 
     public CurveChart(Context context) {
         this(context, null);
@@ -97,11 +111,13 @@ public class CurveChart extends View {
 
 
     }
-    public void setXst(String[] str){
-        Xst=str;
+
+    public void setXst(String[] str) {
+        Xst = str;
     }
-    public void setYst(String[] str){
-        Yst=str;
+
+    public void setYst(String[] str) {
+        Yst = str;
     }
 
     @Override
@@ -125,40 +141,37 @@ public class CurveChart extends View {
         setMeasuredDimension(viewWidth, viewHeight);
         AxisXRect = new RectF(getPaddingLeft(), mSpace - mTxtSize / 2, getPaddingLeft() + 2 * mTxtSize, viewHeight - getPaddingBottom() - mTxtSize);
         AxisYRect = new RectF(AxisXRect.right, viewHeight - getPaddingBottom() - mTxtSize, viewWidth - getPaddingRight(), viewHeight);
+        Log.e("on", "measure");
+        isMeasured = true;
+    }
 
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        Log.e("on", "sizechanged");
     }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        Log.e("on", "Layout"+points.size());
+        Log.e("on", "Layout" + points.size());
     }
-
-    boolean isDraw = false;
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (isDraw) {
+        if (isDrawed && !isDrawing) {
             canvas.drawBitmap(holder, 0, 0, null);
             return;
         }
-        mBitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
-        mCanvas = new Canvas(mBitmap);
 
-        turnPoint();
-
-        drawXT();
-        drawYT();
-
-        initCurPaint(curPaint);
-        if (type == TYPE.CURVER) {
-            drawScrollLine();
-        } else {
-            drawFoldLine();
-        }
+        if (isMeasured && !isTurned)
+            turnPoint();
+        mCanvas.save();
+        mCanvas.drawPath(renderPath, curPaint);
+        mCanvas.restore();
         holder = mBitmap;
         canvas.drawBitmap(mBitmap, 0, 0, null);
-        isDraw = true;
+        isDrawed = true;
     }
 
     public void setType(TYPE type) {
@@ -170,11 +183,13 @@ public class CurveChart extends View {
             return;
         }
         this.points = points;
-        isDraw = false;
+        isDrawed = false;
+        isTurned = false;
+        shortAnimationTime = 0;
         postInvalidate();
     }
 
-    private void initCurPaint(Paint paint) {
+    private void caculateCurPaint(Paint paint) {
         paint.setShadowLayer(10F, 0F, 5F, Color.parseColor("#AAffb90f"));
         LinearGradient mLinearGradient = new LinearGradient(
                 0, mPaddingTop, 0, AxisYRect.top,
@@ -198,12 +213,61 @@ public class CurveChart extends View {
             PointF pointF = points.get(i);
             points.get(i).set((float) (left + (i + 0.5) * width / points.size()), AxisYRect.top - pointF.y * zoomY);
         }
+        isTurned = true;
+        mBitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+        mCanvas = new Canvas(mBitmap);
+        drawXT();
+        drawYT();
+
+        caculateCurPaint(curPaint);
+        if (type == TYPE.CURVER) {
+            caculateScrollLine();
+        } else {
+            caculateFoldLine();
+        }
+        runAnimation();
     }
 
-    private void drawScrollLine() {
+    private void runAnimation() {
+        Log.e("on", "animation");
+        if (pathAnimator != null) {
+            pathAnimator.cancel();
+        }
+
+        if (shortAnimationTime == 0) {
+            shortAnimationTime = getResources().getInteger(android.R.integer.config_shortAnimTime);
+        }
+
+        final PathMeasure pathMeasure = new PathMeasure(sparkPath, false);
+
+        final float endLength = pathMeasure.getLength();
+        if (endLength == 0) return;
+
+        pathAnimator = ValueAnimator.ofFloat(0, endLength);
+        pathAnimator.setDuration(shortAnimationTime);
+        pathAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                Log.e("on", "update");
+                float animatedPathLength = (Float) animation.getAnimatedValue();
+                if (animatedPathLength < endLength)
+                    isDrawing = true;
+                else isDrawing = false;
+                renderPath.reset();
+                pathMeasure.getSegment(0, animatedPathLength, renderPath, true);
+                renderPath.rLineTo(0, 0);
+                postInvalidate();
+            }
+        });
+        pathAnimator.start();
+    }
+
+    private void caculateScrollLine() {
         PointF startp;
         PointF endp;
         for (int i = 0; i < points.size() - 1; i++) {
+            if (i == 0)
+                sparkPath.reset();
             startp = points.get(i);
             endp = points.get(i + 1);
             float wt = (startp.x + endp.x) / 2;
@@ -217,16 +281,21 @@ public class CurveChart extends View {
             Path path = new Path();
             path.moveTo(startp.x, startp.y);
             path.cubicTo(p3.x, p3.y, p4.x, p4.y, endp.x, endp.y);
-            mCanvas.drawPath(path, curPaint);
+            sparkPath.addPath(path);
         }
+        renderPath.reset();
+        renderPath.addPath(sparkPath);
+
     }
 
-    private void drawFoldLine() {
+    private void caculateFoldLine() {
         Path path = new Path();
         path.moveTo(points.get(0).x, points.get(0).y);
         for (int i = 1; i < points.size(); i++)
             path.lineTo(points.get(i).x, points.get(i).y);
-        mCanvas.drawPath(path, curPaint);
+        renderPath.reset();
+        renderPath.addPath(path);
+        sparkPath.addPath(path);
     }
 
 
@@ -265,7 +334,7 @@ public class CurveChart extends View {
         int baseLine = (int) (viewHeight - getPaddingBottom() + viewHeight - getPaddingBottom() - mTxtSize - fontMetrics.bottom - fontMetrics.top) >> 1;
 
         for (int i = 0; i < Yst.length; i++) {
-            mCanvas.drawText(Yst[i], (float) (left + AxisYRect.width() / Yst.length * (i + 0.5)) - getTextWidth(txtPaint, Yst[i]) / 2, baseLine+20, txtPaint);
+            mCanvas.drawText(Yst[i], (float) (left + AxisYRect.width() / Yst.length * (i + 0.5)) - getTextWidth(txtPaint, Yst[i]) / 2, baseLine + 20, txtPaint);
         }
     }
 
