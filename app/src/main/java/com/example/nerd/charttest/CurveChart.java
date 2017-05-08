@@ -45,10 +45,10 @@ public class CurveChart extends View {
     private int mTxtSize = 40;
     private int mTxtColor = Color.GRAY;
     private int mSpace = 100;
-    private int mPaddingTop = 20;
+    private int mPaddingTop = 40;
 
     private int viewWidth, viewHeight;
-    private String[] Xst,Yst;
+    private String[] Xst, Yst;
 
     public CurveChart(Context context) {
         this(context, null);
@@ -97,11 +97,13 @@ public class CurveChart extends View {
 
 
     }
-    public void setXst(String[] str){
-        Xst=str;
+
+    public void setXst(String[] str) {
+        Xst = str;
     }
-    public void setYst(String[] str){
-        Yst=str;
+
+    public void setYst(String[] str) {
+        Yst = str;
     }
 
     @Override
@@ -119,19 +121,19 @@ public class CurveChart extends View {
             viewHeight = heightSize;
         } else {
             mPaddingTop += getPaddingTop();
-            viewHeight = mSpace * 4 + mPaddingTop + mTxtSize + getPaddingBottom();
+            viewHeight = mSpace * 4 + 2 * mPaddingTop + mTxtSize + getPaddingBottom();
         }
 
         setMeasuredDimension(viewWidth, viewHeight);
-        AxisXRect = new RectF(getPaddingLeft(), mSpace - mTxtSize / 2, getPaddingLeft() + 2 * mTxtSize, viewHeight - getPaddingBottom() - mTxtSize);
-        AxisYRect = new RectF(AxisXRect.right, viewHeight - getPaddingBottom() - mTxtSize, viewWidth - getPaddingRight(), viewHeight);
+        AxisXRect = new RectF(getPaddingLeft(), getPaddingTop(), getPaddingLeft() + getMaxTextWidth()+10, viewHeight - getPaddingBottom());
+        AxisYRect = new RectF(AxisXRect.right, viewHeight - getPaddingBottom() - mTxtSize - mPaddingTop, viewWidth - getPaddingRight(), viewHeight - getPaddingBottom());
 
     }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        Log.e("on", "Layout"+points.size());
+        Log.e("on", "Layout" + points.size());
     }
 
     boolean isDraw = false;
@@ -200,6 +202,7 @@ public class CurveChart extends View {
         }
     }
 
+
     private void drawScrollLine() {
         PointF startp;
         PointF endp;
@@ -232,8 +235,10 @@ public class CurveChart extends View {
 
     private void drawXT() {
         float width = AxisXRect.right;
+        Paint.FontMetrics fontMetrics = txtPaint.getFontMetrics();
+        int baseLine = (int) (getPaddingTop() + 2 * mPaddingTop - fontMetrics.bottom - fontMetrics.top) >> 1;
         for (int i = 0; i < Xst.length; i++) {
-            mCanvas.drawText(Xst[i], width - getTextWidth(txtPaint, Xst[i]) - 10, mPaddingTop + i * mSpace + txtPaint.getTextSize() / 2, txtPaint);
+            mCanvas.drawText(Xst[i], width - getTextWidth(txtPaint, Xst[i]) - 10, baseLine + i * mSpace, txtPaint);
 
             if (i == 1 || i == 3) {
                 Paint paint = new Paint();
@@ -262,11 +267,19 @@ public class CurveChart extends View {
         float left = AxisYRect.left;
 
         Paint.FontMetrics fontMetrics = txtPaint.getFontMetrics();
-        int baseLine = (int) (viewHeight - getPaddingBottom() + viewHeight - getPaddingBottom() - mTxtSize - fontMetrics.bottom - fontMetrics.top) >> 1;
+        int baseLine = (int) (AxisYRect.bottom + AxisYRect.top - fontMetrics.bottom - fontMetrics.top) >> 1;
 
         for (int i = 0; i < Yst.length; i++) {
-            mCanvas.drawText(Yst[i], (float) (left + AxisYRect.width() / Yst.length * (i + 0.5)) - getTextWidth(txtPaint, Yst[i]) / 2, baseLine+20, txtPaint);
+            mCanvas.drawText(Yst[i], (float) (left + AxisYRect.width() / Yst.length * (i + 0.5)) - getTextWidth(txtPaint, Yst[i]) / 2, baseLine, txtPaint);
         }
+    }
+
+    public float getMaxTextWidth() {
+        float max = 0;
+        for (int i = 0; i < Xst.length; i++) {
+            max = Math.max(max, getTextWidth(txtPaint, Xst[i]));
+        }
+        return max;
     }
 
     public float getTextWidth(Paint textPaint, String text) {
